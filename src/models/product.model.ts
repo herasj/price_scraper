@@ -3,12 +3,12 @@ import { Schema, model } from "mongoose";
 
 const ProductSchema = new Schema(
   {
-    name: { type: String, required: true },
-    url: { type: String, required: true },
-    oldPrice: { type: String, required: true },
-    newPrice: { type: String, required: true },
+    title: { type: String, required: true },
+    link: { type: String, required: true, trim: true },
+    oldPrice: { type: String, required: true, trim: true },
+    newPrice: { type: String, required: true, trim: true },
   },
   { id: false, timestamps: true, versionKey: false }
 );
 
-export const ProductModel = model<IMongoProduct>('Products',ProductSchema)
+export const ProductModel = model<IMongoProduct>("Products", ProductSchema);
