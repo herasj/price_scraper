@@ -36,17 +36,21 @@ export class AlkostoService {
     });
   };
 
-  private getProducts = async () => {
+  private scrollAndWait = async() => {
     await this.page.evaluate(() => {
-      window.scrollBy(0, 7 * window.innerHeight);
+      window.scrollBy(0,window.innerHeight);
     });
-    await this.page.waitFor(5000);
+    await this.page.waitFor(1000);
+  }
+  
+  private getProducts = async () => {
     await this.page.waitForSelector(
       '[class="products-grid last even"] > li > div > a'
     );
     const items = await this.page.$$(
       '[class="products-grid last even"] > li > div > a'
     );
+    await this.page.waitFor(1000)
     const data = [];
     for await (let item of items) {
       const link = await (await item.getProperty("href")).jsonValue();
@@ -126,7 +130,7 @@ export class AlkostoService {
   };
 
   public extractData = async (): Promise<void> => {
-    const pages = [2, 3, 4, 5];
+    const pages = new Array(39);
     await this.setup();
     console.log("Setup completed !");
     await this.takeScreenshot();
@@ -134,6 +138,7 @@ export class AlkostoService {
     await this.getProducts();
     console.log("Products saved :)");
     for await (const page of pages) {
+      console.log('Loading new page ....')
       await this.nextPage();
     }
     console.log("Getting More Info ....");
