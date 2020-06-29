@@ -1,4 +1,4 @@
-# Price Traker
+# Price Scraper
 
 
 ## Usage
