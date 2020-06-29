@@ -10,7 +10,7 @@
     "build": "rimraf ./build && tsc"
   },
   "keywords": [],
-  "author": "",
+  "author": "herasj",
   "license": "ISC",
   "dependencies": {
     "cli-progress": "^3.8.2",

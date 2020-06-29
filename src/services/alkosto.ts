@@ -129,11 +129,7 @@ export class AlkostoService {
     bar.start(this.data.length, 0);
     for await (const item of this.data) {
       try {
-        if (await ProductModel.exists({ title: item.title })) {
-          await ProductModel.findOneAndUpdate({ title: item.title }, item);
-        } else {
           await ProductModel.create(item);
-        }
       } catch (error) {
         console.dir(`Error on ${item.title}: ${error}`);
         errors++;
@@ -141,8 +137,9 @@ export class AlkostoService {
       cont++;
       bar.update(cont);
       //   console.log(`${cont}/${this.data.length}`);
-      console.log(`${errors} \n Errors\n\n`);
+      // 
     }
+    console.log(`Success :) ${errors} \n Errors\n\n`);
   };
 
   public extractData = async (): Promise<void> => {
