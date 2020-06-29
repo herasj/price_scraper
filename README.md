@@ -10,3 +10,7 @@ To compile and execute the script, after that you can use **npm run start:prod**
 ----------
 
 **Please make sure to create an .env on /src , you can watch the environment schema on /src/config/environment.ts also, you have to create a screenshots folder on the project root folder**
+
+### Target URL
+
+> https://www.alkosto.com/electro
