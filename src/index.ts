@@ -12,11 +12,13 @@ class Main {
         console.log("Connected to database");
         await this.alkostoService.extractData();
         console.log("END");
+        process.exit();
       })
       .catch((error) => {
         console.dir(`Error: ${error}`);
       });
   }
 }
-
+console.log("\n-----------------------");
+console.log("Date: " + new Date());
 new Main().start();
