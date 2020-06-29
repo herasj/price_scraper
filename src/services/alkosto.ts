@@ -1,8 +1,9 @@
 import { IProduct } from "../interfaces/product.interface";
+import { ProductModel } from "../models/product.model";
 import { writeFileSync, appendFileSync } from "fs";
 import { launch, Page, Browser } from "puppeteer";
+import { SingleBar, Presets, Bar } from "cli-progress";
 import { union } from "lodash";
-
 export class AlkostoService {
   private readonly startUrl: string;
   private browser: Browser | null;
@@ -36,7 +37,13 @@ export class AlkostoService {
   };
 
   private getProducts = async () => {
-    await this.page.waitForSelector('[class="products-grid last even"] > li > div > a');
+    await this.page.evaluate(() => {
+      window.scrollBy(0, 7 * window.innerHeight);
+    });
+    await this.page.waitFor(5000);
+    await this.page.waitForSelector(
+      '[class="products-grid last even"] > li > div > a'
+    );
     const items = await this.page.$$(
       '[class="products-grid last even"] > li > div > a'
     );
@@ -46,9 +53,7 @@ export class AlkostoService {
       const title = await (await item.getProperty("title")).jsonValue();
       data.push({ link: `${link}`, title: `${title}` });
     }
-    console.log('\n\n')
-    this.data = union(this.data, data)
-    console.dir(this.data)
+    this.data = union(this.data, data);
   };
 
   private nextPage = async () => {
@@ -56,30 +61,92 @@ export class AlkostoService {
     await this.getProducts();
   };
 
-  private productInfo = async() => {
-      for await(const item of this.data) {
-        await this.page.goto(item.link, { waitUntil: "networkidle0" });
-        await this.page.waitForSelector('[class="price-old"]')
+  private productInfo = async () => {
+    let cont = 0;
+    let errors = 0;
+    const bar = new SingleBar({}, Presets.shades_classic);
+    const newData = [];
+    console.log(
+      `Getting information about ${this.data.length} products .... \n\n`
+    );
+    bar.start(this.data.length, 0);
+    for await (const item of this.data) {
+      try {
+        await this.page.goto(item.link, {
+          waitUntil: "networkidle0",
+          timeout: 100000,
+        });
+        await this.page.waitForSelector('[class="price-old"]');
+        await this.page.waitForSelector('[itemprop="price"]');
+        const prices = await this.page.evaluate(() => {
+          const oldPrice = document.querySelector('[class="price-old"]')
+            .textContent;
+          const newPrice = document.querySelector('[itemprop="price"]')
+            .textContent;
+          return {
+            oldPrice: `${oldPrice}`.substring(2),
+            newPrice: `${newPrice}`,
+          };
+        });
+        newData.push({ ...item, ...prices });
+      } catch (error) {
+        console.dir(`Timeout on product: ${item.title}`);
+        errors++;
       }
-  }
-  
+      cont++;
+      bar.update(cont);
+      //   console.log(`${cont}/${this.data.length}`);
+      //   console.log(`${errors} Errors \n`);
+    }
+    this.data = newData;
+  };
+
+  private uploadData = async () => {
+    let cont = 0;
+    let errors = 0;
+    const bar = new SingleBar({}, Presets.shades_classic);
+    console.log(`Uploading ${this.data.length} documents .... \n\n`);
+    bar.start(this.data.length, 0);
+    for await (const item of this.data) {
+      try {
+        if (await ProductModel.exists({ title: item.title })) {
+          await ProductModel.findOneAndUpdate({ title: item.title }, item);
+        } else {
+          await ProductModel.create(item);
+        }
+      } catch (error) {
+        console.dir(`Error on ${item.title}: ${error}`);
+        errors++;
+      }
+      cont++;
+      bar.update(cont);
+      //   console.log(`${cont}/${this.data.length}`);
+      console.log(`${errors} \n Errors\n\n`);
+    }
+  };
+
   public extractData = async (): Promise<void> => {
     const pages = [2, 3, 4, 5];
     await this.setup();
+    console.log("Setup completed !");
     await this.takeScreenshot();
+    console.log("Getting Products ....");
     await this.getProducts();
+    console.log("Products saved :)");
     for await (const page of pages) {
-      console.dir(page);
       await this.nextPage();
-      console.log("endpage");
     }
-    console.dir(this.data)
-    for (const item of this.data) {
-      appendFileSync(
-        `${process.cwd()}/lista.txt`,
-        `${item.title}\n${item.link}\n\n`
-      );
-    }
+    console.log("Getting More Info ....");
+    await this.productInfo();
+    console.log("More infomation added ;)");
+    await this.uploadData();
     await this.browser.close();
   };
 }
+
+// for (const item of this.data) {
+//   appendFileSync(
+//     `${process.cwd()}/lista.txt`,
+//     `${item.title}\n${item.link}\n\n`
+//   );
+// }

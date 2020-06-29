@@ -1,6 +1,5 @@
-require("dotenv").config();
-import { connection } from "./database/mongo";
 import { AlkostoService } from "./services/alkosto";
+import { connection } from "./database/mongo";
 
 class Main {
   alkostoService: AlkostoService;
@@ -12,7 +11,11 @@ class Main {
       console.log("Connected to database");
       await this.alkostoService.extractData();
       console.log("END");
-    });
+    })
+    .catch((error) => {
+      console.dir(`Error on db connection: ${error}`)
+    }
+    )
   }
 }
 
