@@ -1,5 +1,6 @@
 import { connect } from "mongoose";
-const url = `${process.env.MONGO_URI}`;
+import { environment } from "../config/environment";
+
 const options = { 
   useNewUrlParser: true ,
   useFindAndModify: false,
@@ -7,4 +8,4 @@ const options = {
   useUnifiedTopology: true
 }
 
-export const connection = connect(url, options)
+export const connection = connect(environment.MONGO_URI, options)
