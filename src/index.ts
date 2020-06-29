@@ -12,6 +12,7 @@ class Main {
         console.log("Connected to database");
         await this.alkostoService.extractData();
         console.log("END");
+        console.log("-----------------------");
         process.exit();
       })
       .catch((error) => {
