@@ -8,5 +8,4 @@ const options = {
   useUnifiedTopology: true
 }
 
-console.dir(environment)
 export const connection = connect(environment.MONGO_URI, options)
