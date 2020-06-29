@@ -17,6 +17,9 @@ class Main {
       })
       .catch((error) => {
         console.dir(`Error: ${error}`);
+        console.log('Ending ........');
+        console.log("-----------------------");
+        process.exit();
       });
   }
 }
