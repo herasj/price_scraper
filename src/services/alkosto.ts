@@ -1,9 +1,11 @@
 import { IProduct } from "../interfaces/product.interface";
 import { ProductModel } from "../models/product.model";
+import { SingleBar, Presets, Bar } from "cli-progress";
+import { environment } from "../config/environment";
 import { writeFileSync, appendFileSync } from "fs";
 import { launch, Page, Browser } from "puppeteer";
-import { SingleBar, Presets, Bar } from "cli-progress";
 import { union } from "lodash";
+
 export class AlkostoService {
   private readonly startUrl: string;
   private browser: Browser | null;
@@ -11,7 +13,7 @@ export class AlkostoService {
   private data: IProduct[];
 
   constructor() {
-    this.startUrl = "https://www.alkosto.com/electro";
+    this.startUrl = `${environment.TARGET_URL}`;
     this.browser = null;
     this.page = null;
     this.data = [];
@@ -36,13 +38,13 @@ export class AlkostoService {
     });
   };
 
-  private scrollAndWait = async() => {
+  private scrollAndWait = async () => {
     await this.page.evaluate(() => {
-      window.scrollBy(0,window.innerHeight);
+      window.scrollBy(0, window.innerHeight);
     });
     await this.page.waitFor(1000);
-  }
-  
+  };
+
   private getProducts = async () => {
     await this.page.waitForSelector(
       '[class="products-grid last even"] > li > div > a'
@@ -50,7 +52,7 @@ export class AlkostoService {
     const items = await this.page.$$(
       '[class="products-grid last even"] > li > div > a'
     );
-    await this.page.waitFor(1000)
+    await this.page.waitFor(1000);
     const data = [];
     for await (let item of items) {
       const link = await (await item.getProperty("href")).jsonValue();
@@ -78,30 +80,44 @@ export class AlkostoService {
       try {
         await this.page.goto(item.link, {
           waitUntil: "networkidle0",
-          timeout: 100000,
         });
-        await this.page.waitForSelector('[class="price-old"]');
-        await this.page.waitForSelector('[itemprop="price"]');
-        const prices = await this.page.evaluate(() => {
-          const oldPrice = document.querySelector('[class="price-old"]')
-            .textContent;
-          const newPrice = document.querySelector('[itemprop="price"]')
-            .textContent;
-          return {
-            oldPrice: `${oldPrice}`.substring(2),
-            newPrice: `${newPrice}`,
-          };
-        });
+        let prices;
+        let selector = '[itemprop="price"]';
+        if (!(await this.page.$(selector))) selector = '[class="price"]';
+        if (await this.page.$('[class="price-old"]')) {
+          prices = await this.page.evaluate((selector) => {
+            const oldPrice = document.querySelector('[class="price-old"]')
+              .textContent;
+            const newPrice = document.querySelector(selector).textContent;
+            return {
+              oldPrice: `${oldPrice}`.substring(2),
+              newPrice: `${newPrice}`,
+            };
+          }, selector);
+          if (selector === '[class="price"]')
+            prices.newPrice = prices.newPrice.substring(4);
+        } else {
+          prices = await this.page.evaluate((selector) => {
+            const newPrice = document.querySelector(selector).textContent;
+            return {
+              oldPrice: `N/A`,
+              newPrice: `${newPrice}`,
+            };
+          }, selector);
+          if (selector === '[class="price"]')
+            prices.newPrice = prices.newPrice.substring(4);
+        }
         newData.push({ ...item, ...prices });
       } catch (error) {
-        console.dir(`Timeout on product: ${item.title}`);
+        console.dir(`Error on  ${item.title}: ${error}`);
         errors++;
       }
       cont++;
       bar.update(cont);
-      //   console.log(`${cont}/${this.data.length}`);
-      //   console.log(`${errors} Errors \n`);
     }
+    console.log(
+      `Errors: ${errors}/${this.data.length}, ${errors / this.data.length} %`
+    );
     this.data = newData;
   };
 
@@ -138,7 +154,7 @@ export class AlkostoService {
     await this.getProducts();
     console.log("Products saved :)");
     for await (const page of pages) {
-      console.log('Loading new page ....')
+      console.log("Loading new page ....");
       await this.nextPage();
     }
     console.log("Getting More Info ....");
